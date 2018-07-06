@@ -11,6 +11,8 @@ import binascii
 import select
 import struct
 import signal
+import pickle
+from time import sleep
 
 def preexec_function():
     # Ignore the SIGINT signal by setting the handler to the standard
@@ -27,6 +29,8 @@ SEC_LEVEL_HIGH = "high"
 
 ADDR_TYPE_PUBLIC = "public"
 ADDR_TYPE_RANDOM = "random"
+
+TIMEOUT = 5.0
 
 def DBG(*args):
     if Debugging:
@@ -401,9 +405,9 @@ class Peripheral(BluepyHelper):
             self._writeCmd("conn %s %s %s\n" % (addr, addrType, "hci"+str(iface)))
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
-        rsp = self._getResp('stat')
+        rsp = self._getResp('stat', TIMEOUT)
         while rsp['state'][0] == 'tryconn':
-            rsp = self._getResp('stat')
+            rsp = self._getResp('stat', TIMEOUT)
         if rsp['state'][0] != 'conn':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
@@ -777,21 +781,58 @@ def get_json_uuid():
 AssignedNumbers = _UUIDNameMap( get_json_uuid() )
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        sys.exit("Usage:\n  %s <mac-address> [random]" % sys.argv[0])
 
     if not os.path.isfile(helperExe):
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
-    devAddr = sys.argv[1]
-    if len(sys.argv) == 3:
-        addrType = sys.argv[2]
-    else:
-        addrType = ADDR_TYPE_PUBLIC
-    print("Connecting to: {}, address type: {}".format(devAddr, addrType))
-    conn = Peripheral(devAddr, addrType)
-    try:
-        conn.services[-2].getCharacteristics()[1].write("AT+HWMODELED=5,1\n")
-    finally:
-        conn.services[-2].getCharacteristics()[1].write("+++\n")
-        conn.disconnect()
+    cmd = sys.argv[1]
+
+
+    devs = pickle.load(open("dev.p", "rb"))
+    addrType = ADDR_TYPE_RANDOM
+    if cmd == '2':
+        data = 'AT+HWVBAT\n'
+        dataf = 'AT\n'
+        for i in devs:
+            print("Connecting to: {}".format(i))
+            conn = []
+            try:
+                conn = Peripheral(i, addrType)
+            except TypeError:
+                print("Fail to connect to"+i)
+                continue
+            try:
+                conn.services[-2].getCharacteristics()[1].write(dataf)
+                sleep(0.05)
+                resp = (conn.services[-2].getCharacteristics()[0].read())#repr(ch.read()))
+                if resp == "OK\r\n":
+                    pass
+                else:
+                    sleep(0.05)
+                    conn.services[-2].getCharacteristics()[1].write("+++\n")
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write(data)
+                sleep(0.05)
+                print(conn.services[-2].getCharacteristics()[0].read()[0:-4])#repr(ch.read()))
+            finally:
+                #conn.services[-2].getCharacteristics()[1].write(data)
+                conn.disconnect()
+    if cmd == '1' or cmd == '0':
+        data = 'AT+HWMODELED=5,'
+        data = data + cmd + '\n'
+        for i in devs:
+            print("Connecting to: {}".format(i))
+            conn = []
+            try:
+                conn = Peripheral(i, addrType)
+            except TypeError:
+                print("Fail to connect to"+i)
+                continue
+            try:
+                conn.services[-2].getCharacteristics()[1].write(data)
+            finally:
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write("+++\n")
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write(data)
+                conn.disconnect()
