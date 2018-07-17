@@ -13,6 +13,8 @@ import struct
 import signal
 import pickle
 from time import sleep
+from subprocess import check_output
+import multiprocessing as mp
 
 def preexec_function():
     # Ignore the SIGINT signal by setting the handler to the standard
@@ -31,6 +33,55 @@ ADDR_TYPE_PUBLIC = "public"
 ADDR_TYPE_RANDOM = "random"
 
 TIMEOUT = 5.0
+
+def f(iface, devs, cmd):
+    addrType = ADDR_TYPE_RANDOM
+    if cmd == '2':
+        data = 'AT+HWVBAT\n'
+        dataf = 'AT\n'
+        for i in devs:
+            print("Connecting to: {}".format(i))
+            conn = []
+            try:
+                conn = Peripheral(i, addrType, iface = iface)
+            except TypeError:
+                print("Fail to connect to"+i)
+                continue
+            try:
+                conn.services[-2].getCharacteristics()[1].write(dataf)
+                sleep(0.05)
+                resp = (conn.services[-2].getCharacteristics()[0].read())#repr(ch.read()))
+                if resp == "OK\r\n":
+                    pass
+                else:
+                    sleep(0.05)
+                    conn.services[-2].getCharacteristics()[1].write("+++\n")
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write(data)
+                sleep(0.05)
+                print(conn.services[-2].getCharacteristics()[0].read()[0:-4])#repr(ch.read()))
+            finally:
+                #conn.services[-2].getCharacteristics()[1].write(data)
+                conn.disconnect()
+    if cmd == '1' or cmd == '0':
+        data = 'AT+HWMODELED=5,'
+        data = data + cmd + '\n'
+        for i in devs:
+            print("Connecting to: {}".format(i))
+            conn = []
+            try:
+                conn = Peripheral(i, addrType, iface = iface)
+            except TypeError:
+                print("Fail to connect to"+i)
+                continue
+            try:
+                conn.services[-2].getCharacteristics()[1].write(data)
+            finally:
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write("+++\n")
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write(data)
+                conn.disconnect()
 
 def DBG(*args):
     if Debugging:
@@ -785,11 +836,18 @@ if __name__ == '__main__':
     if not os.path.isfile(helperExe):
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
+    hosts = check_output(['hciconfig'])
+    host = [i for i in range(len(hosts.split('hci')) - 1)]
+    print(host)
     cmd = sys.argv[1]
 
 
     devs = pickle.load(open("dev.p", "rb"))
     addrType = ADDR_TYPE_RANDOM
+    pool = [mp.Process(target = f), args=(host[i], devlist[i], cmd, ) for i in range(len(host))]
+    for i in pool:
+	i.join()
+'''
     if cmd == '2':
         data = 'AT+HWVBAT\n'
         dataf = 'AT\n'
@@ -836,3 +894,4 @@ if __name__ == '__main__':
                 sleep(0.05)
                 conn.services[-2].getCharacteristics()[1].write(data)
                 conn.disconnect()
+'''

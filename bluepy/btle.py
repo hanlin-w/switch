@@ -782,7 +782,7 @@ if __name__ == '__main__':
     else:
         addrType = ADDR_TYPE_PUBLIC
     print("Connecting to: {}, address type: {}".format(devAddr, addrType))
-    conn = Peripheral(devAddr, addrType)
+    conn = Peripheral(devAddr, addrType, iface = 0)
     try:
         for svc in conn.services:
             print(str(svc), ":")

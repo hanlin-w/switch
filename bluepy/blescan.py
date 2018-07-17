@@ -98,7 +98,7 @@ class ScanPrint(btle.DefaultDelegate):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--hci', action='store', type=int, default=1,
+    parser.add_argument('-i', '--hci', action='store', type=int, default=0,
                         help='Interface number for scan')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
                         help='Scan delay, 0 for continuous')
