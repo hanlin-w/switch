@@ -837,14 +837,35 @@ if __name__ == '__main__':
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
     hosts = check_output(['hciconfig'])
-    host = [i for i in range(len(hosts.split('hci')) - 1)]
+    temp = hosts.split('hci')
+    host = [int(list(temp[i])[0]) for i in range(1, len(temp))]
     print(host)
     cmd = sys.argv[1]
 
 
     devs = pickle.load(open("dev.p", "rb"))
     addrType = ADDR_TYPE_RANDOM
-    pool = [mp.Process(target = f), args=(host[i], devlist[i], cmd, ) for i in range(len(host))]
+    devlist = []
+    if len(host) >= len(devs):
+	for i in range(len(host)):
+		if i < len(devs):
+			devlist.append(list([devs[i]]))
+		else:
+			devlist.append(list([]))
+    else:
+	ll = len(devs) / len(host)
+	for i in range(len(host)):
+		temp = []
+		for j in range(i * ll, min(len(devs), i * ll + ll)):
+			temp.append(devs[j])
+		devlist.append(temp)
+
+				
+		
+    for i in range(len(host)):
+    	pool = [mp.Process(target = f, args=(host[i], devlist[i], cmd, )) for i in range(len(host))]
+    for i in pool:
+	i.start()
     for i in pool:
 	i.join()
 '''
