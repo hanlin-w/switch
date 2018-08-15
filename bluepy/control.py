@@ -33,54 +33,43 @@ ADDR_TYPE_PUBLIC = "public"
 ADDR_TYPE_RANDOM = "random"
 
 TIMEOUT = 5.0
+ATTEMPT = 5
 
 def f(iface, devs, cmd):
     addrType = ADDR_TYPE_RANDOM
-    if cmd == '2':
-        data = 'AT+HWVBAT\n'
-        dataf = 'AT\n'
-        for i in devs:
-            print("Connecting to: {}".format(i))
-            conn = []
-            try:
-                conn = Peripheral(i, addrType, iface = iface)
-            except TypeError:
-                print("Fail to connect to"+i)
-                continue
-            try:
-                conn.services[-2].getCharacteristics()[1].write(dataf)
-                sleep(0.05)
-                resp = (conn.services[-2].getCharacteristics()[0].read())#repr(ch.read()))
-                if resp == "OK\r\n":
-                    pass
-                else:
-                    sleep(0.05)
-                    conn.services[-2].getCharacteristics()[1].write("+++\n")
-                sleep(0.05)
-                conn.services[-2].getCharacteristics()[1].write(data)
-                sleep(0.05)
-                print(conn.services[-2].getCharacteristics()[0].read()[0:-4])#repr(ch.read()))
-            finally:
-                #conn.services[-2].getCharacteristics()[1].write(data)
-                conn.disconnect()
     if cmd == '1' or cmd == '0':
         data = 'AT+HWMODELED=5,'
         data = data + cmd + '\n'
         for i in devs:
             print("Connecting to: {}".format(i))
             conn = []
-            try:
-                conn = Peripheral(i, addrType, iface = iface)
-            except TypeError:
-                print("Fail to connect to"+i)
-                continue
+	    flag = 0
+	    while flag <= ATTEMPT:
+		    try:
+			conn = Peripheral(i, addrType, iface = iface)
+			flag = ATTEMPT + 2
+		    except:
+			sleep(0.1)
+			flag += 1
+			print("Fail to connect to "+i+", attempt "+str(flag))
+	    if flag == ATTEMPT + 1:
+		print("Fail to connect to "+i+", giving up")
+		continue
             try:
                 conn.services[-2].getCharacteristics()[1].write(data)
-            finally:
                 sleep(0.05)
                 conn.services[-2].getCharacteristics()[1].write("+++\n")
                 sleep(0.05)
                 conn.services[-2].getCharacteristics()[1].write(data)
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write("+++\n")
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write(data)
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write("+++\n")
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write(data)
+            finally:
                 conn.disconnect()
 
 def DBG(*args):
@@ -858,6 +847,9 @@ if __name__ == '__main__':
 		temp = []
 		for j in range(i * ll, min(len(devs), i * ll + ll)):
 			temp.append(devs[j])
+		if i == len(host) - 1:
+			for j in range(i * ll + ll, len(devs)):
+				temp.append(devs[j])
 		devlist.append(temp)
 
 				
@@ -868,51 +860,3 @@ if __name__ == '__main__':
 	i.start()
     for i in pool:
 	i.join()
-'''
-    if cmd == '2':
-        data = 'AT+HWVBAT\n'
-        dataf = 'AT\n'
-        for i in devs:
-            print("Connecting to: {}".format(i))
-            conn = []
-            try:
-                conn = Peripheral(i, addrType)
-            except TypeError:
-                print("Fail to connect to"+i)
-                continue
-            try:
-                conn.services[-2].getCharacteristics()[1].write(dataf)
-                sleep(0.05)
-                resp = (conn.services[-2].getCharacteristics()[0].read())#repr(ch.read()))
-                if resp == "OK\r\n":
-                    pass
-                else:
-                    sleep(0.05)
-                    conn.services[-2].getCharacteristics()[1].write("+++\n")
-                sleep(0.05)
-                conn.services[-2].getCharacteristics()[1].write(data)
-                sleep(0.05)
-                print(conn.services[-2].getCharacteristics()[0].read()[0:-4])#repr(ch.read()))
-            finally:
-                #conn.services[-2].getCharacteristics()[1].write(data)
-                conn.disconnect()
-    if cmd == '1' or cmd == '0':
-        data = 'AT+HWMODELED=5,'
-        data = data + cmd + '\n'
-        for i in devs:
-            print("Connecting to: {}".format(i))
-            conn = []
-            try:
-                conn = Peripheral(i, addrType)
-            except TypeError:
-                print("Fail to connect to"+i)
-                continue
-            try:
-                conn.services[-2].getCharacteristics()[1].write(data)
-            finally:
-                sleep(0.05)
-                conn.services[-2].getCharacteristics()[1].write("+++\n")
-                sleep(0.05)
-                conn.services[-2].getCharacteristics()[1].write(data)
-                conn.disconnect()
-'''
