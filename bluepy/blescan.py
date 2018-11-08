@@ -5,6 +5,7 @@ import binascii
 import os
 import sys
 from bluepy import btle
+import pickle
 
 if os.getenv('C', '1') == '0':
     ANSI_RED = ''

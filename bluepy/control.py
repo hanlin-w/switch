@@ -33,9 +33,10 @@ ADDR_TYPE_PUBLIC = "public"
 ADDR_TYPE_RANDOM = "random"
 
 TIMEOUT = 5.0
-ATTEMPT = 5
+ATTEMPT = 3
 
 def f(iface, devs, cmd):
+    sleep(0.001)
     addrType = ADDR_TYPE_RANDOM
     if cmd == '1' or cmd == '0':
         data = 'AT+HWMODELED=5,'
@@ -69,8 +70,18 @@ def f(iface, devs, cmd):
                 conn.services[-2].getCharacteristics()[1].write("+++\n")
                 sleep(0.05)
                 conn.services[-2].getCharacteristics()[1].write(data)
+                sleep(0.05)
+                conn.services[-2].getCharacteristics()[1].write("+++\n")
+		sleep(0.05)
             finally:
-                conn.disconnect()
+		pass
+	    f_d = False
+	    while f_d == False:
+		try:
+			conn.disconnect()
+			f_d = True
+		except:
+			f_d = False
 
 def DBG(*args):
     if Debugging:
@@ -833,6 +844,7 @@ if __name__ == '__main__':
 
 
     devs = pickle.load(open("dev.p", "rb"))
+    devs = [devs[-1]]
     addrType = ADDR_TYPE_RANDOM
     devlist = []
     if len(host) >= len(devs):
